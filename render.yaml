@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: bingo-digital
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: WOOVI_API_URL
+        value: https://api.woovi.com
+      - key: WOOVI_CLIENT_ID
+        sync: false
+      - key: WOOVI_CLIENT_SECRET
+        sync: false
+      - key: WOOVI_WEBHOOK_SECRET
+        sync: false
+      - key: TAXA_PLATAFORMA
+        value: 5

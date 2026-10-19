@@ -1,0 +1,5 @@
+node_modules
+.env
+bingo.db
+uploads/*
+!uploads/.gitkeep
