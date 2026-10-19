@@ -3,69 +3,113 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bingo Digital 🎯</title>
+  <title>Bingo Social 🎯</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
     :root{--primario:#622ea0;--secundario:#f97316;--claro:#f8fafc;--escuro:#1e293b;--acerto:#10b981;--erro:#ef4444}
-    body{background:linear-gradient(135deg,var(--primario),#4c1d7c);min-height:100vh;color:white}
-    .container{max-width:1200px;margin:0 auto;padding:20px}
-    header{display:flex;justify-content:space-between;align-items:center;padding:20px 0;flex-wrap:wrap;gap:15px}
-    h1{font-size:2rem;text-shadow:0 2px 10px rgba(0,0,0,.2)}
-    .area-botoes{display:flex;gap:10px}
-    .btn{padding:10px 20px;border:none;border-radius:8px;font-size:1rem;font-weight:bold;cursor:pointer;transition:.3s;text-decoration:none;display:inline-block;text-align:center}
-    .btn-primario{background:var(--secundario);color:white}
-    .btn-primario:hover{background:#e8650c}
-    .btn-claro{background:white;color:var(--primario)}
-    .btn-claro:hover{background:#f0f0f0}
+    body{background:linear-gradient(135deg,var(--primario),#4c1d7c);min-height:100vh;color:white;display:flex;flex-direction:column}
+    
+    /* ========== CABEÇALHO ========== */
+    header.cabecalho{background:rgba(255,255,255,.15);backdrop-filter:blur(10px);padding:15px 25px;border-bottom:1px solid rgba(255,255,255,.2);position:sticky;top:0;z-index:999}
+    .cabecalho-conteudo{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px}
+    .logo-area{display:flex;align-items:center;gap:12px;text-decoration:none;color:white}
+    .logo-icone{font-size:2.2rem}
+    .logo-texto h1{font-size:1.4rem;line-height:1.2}
+    .logo-texto p{font-size:.85rem;opacity:.8}
+    .botoes-cabecalho{display:flex;gap:10px;align-items:center}
+    
+    /* ========== CONTEÚDO PRINCIPAL ========== */
+    main{flex:1;padding:25px;max-width:1200px;margin:0 auto;width:100%}
+    
+    /* ========== NAVEGAÇÃO ========== */
     .barra-navegacao{background:rgba(255,255,255,.1);border-radius:12px;padding:15px;margin:20px 0;display:flex;gap:10px;flex-wrap:wrap}
     .barra-navegacao a{color:white;text-decoration:none;padding:10px 20px;border-radius:8px;transition:.3s}
     .barra-navegacao a:hover,.barra-navegacao a.ativo{background:var(--secundario)}
+    
+    /* ========== BINGOS ========== */
     .card{background:white;border-radius:16px;padding:25px;color:var(--escuro);box-shadow:0 8px 30px rgba(0,0,0,.2);margin-bottom:20px}
     .card h2{color:var(--primario);margin-bottom:15px}
     .banner-bingo{background:linear-gradient(90deg,var(--primario),#7c3aed);border-radius:12px;padding:20px;margin-bottom:15px;cursor:pointer;transition:.3s;color:white}
     .banner-bingo:hover{transform:scale(1.01)}
-    .banner-bingo h3{font-size:1.2rem;margin-bottom:8px}
     .preco{font-size:1.3rem;font-weight:bold;color:var(--secundario);margin-top:8px}
     .data{opacity:.9;font-size:.9rem;margin-top:4px}
     .sem-bingos{text-align:center;padding:40px;color:#888}
-    .grupo-input{margin-bottom:15px}
-    label{display:block;margin-bottom:5px;font-weight:bold;color:#444}
-    input,textarea,select{width:100%;padding:12px;border:2px solid #ddd;border-radius:8px;font-size:1rem}
-    input:focus{outline:none;border-color:var(--primario)}
-    .oculto{display:none !important}
-    .aviso{padding:12px;border-radius:8px;margin:15px 0}
-    .aviso.sucesso{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
-    .aviso.erro{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
     .etiqueta{display:inline-block;padding:4px 10px;border-radius:20px;font-size:.8rem;font-weight:bold;margin-left:8px}
     .etiqueta.pendente{background:#fef3c7;color:#92400e}
     .etiqueta.aprovado{background:#d1fae5;color:#065f46}
     .etiqueta.rascunho{background:#e5e7eb;color:#4b5563}
     .etiqueta.publicado{background:#dbeafe;color:#1e40af}
     .etiqueta.em_andamento{background:#fef3c7;color:#92400e}
-    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000}
-    .modal-conteudo{background:white;border-radius:16px;padding:25px;max-width:420px;width:90%;color:var(--escuro)}
-    .fechar{float:right;cursor:pointer;font-size:1.3rem;color:#888}
+    
+    /* ========== BOTÕES ========== */
+    .btn{padding:10px 20px;border:none;border-radius:8px;font-size:1rem;font-weight:bold;cursor:pointer;transition:.3s;text-decoration:none;display:inline-block;text-align:center}
+    .btn-primario{background:var(--secundario);color:white}
+    .btn-primario:hover{background:#e86509}
+    .btn-claro{background:white;color:var(--primario)}
+    .btn-claro:hover{background:#f0f0f0}
+    .btn-sucesso{background:var(--acerto);color:white}
+    .btn-sucesso:hover{background:#0da271}
+    
+    /* ========== FORMULÁRIOS ========== */
+    .grupo-input{margin-bottom:15px}
+    label{display:block;margin-bottom:5px;font-weight:bold;color:#444}
+    input,select{width:100%;padding:12px;border:2px solid #ddd;border-radius:8px;font-size:1rem}
+    input:focus{outline:none;border-color:var(--primario)}
+    
+    /* ========== MODAL COM ROLAGEM ========== */
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);display:flex;align-items:flex-start;justify-content:center;z-index:1000;padding:20px;overflow-y:auto}
+    .modal-conteudo{background:white;border-radius:16px;padding:25px;max-width:420px;width:100%;color:var(--escuro);margin:20px 0}
+    .fechar{float:right;cursor:pointer;font-size:1.3rem;color:#888;margin-top:-5px}
+    
+    /* ========== AVISOS ========== */
+    .aviso{padding:12px;border-radius:8px;margin:15px 0}
+    .aviso.sucesso{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+    .aviso.erro{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+    
+    /* ========== RODAPÉ ========== */
+    footer.rodape{background:rgba(0,0,0,.2);padding:30px 25px;margin-top:40px;border-top:1px solid rgba(255,255,255,.15)}
+    .rodape-conteudo{max-width:1200px;margin:0 auto;text-align:center}
+    .rodape-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:15px}
+    .rodape-texto{opacity:.75;font-size:.9rem;line-height:1.6}
+    .rodape-links{margin-top:15px;display:flex;justify-content:center;gap:20px;flex-wrap:wrap}
+    .rodape-links a{color:white;opacity:.75;text-decoration:none}
+    .rodape-links a:hover{opacity:1;text-decoration:underline}
+    
+    /* ========== UTILITÁRIOS ========== */
+    .oculto{display:none !important}
     table{border-collapse:collapse;margin:0 auto}
     td,th{width:40px;height:40px;border:1px solid #ccc;text-align:center}
     th{background:#eee}
+    #nome-usuario{padding:0 10px;font-weight:bold}
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- CABEÇALHO -->
-    <header>
-      <h1>🎯 Bingo Digital</h1>
-      <div id="botoes-nao-logado" class="area-botoes">
-        <button class="btn btn-claro" onclick="abrirLogin()">Entrar</button>
-        <button class="btn btn-primario" onclick="abrirCadastro()">Cadastrar</button>
-      </div>
-      <div id="botoes-logado" class="area-botoes oculto">
-        <span id="nome-usuario" style="padding:0 10px;font-weight:bold"></span>
-        <button class="btn btn-claro" onclick="sair()">Sair</button>
-      </div>
-    </header>
 
-    <!-- PÁGINA INÍCIO — BINGOS DISPONÍVEIS (JÁ APARECE PRIMEIRO!) -->
+  <!-- CABEÇALHO -->
+  <header class="cabecalho">
+    <div class="cabecalho-conteudo">
+      <a href="#" class="logo-area" onclick="voltarInicio(); return false;">
+        <span class="logo-icone">🎯</span>
+        <div class="logo-texto">
+          <h1>Bingo Digital</h1>
+          <p>Jogos de Beneficência</p>
+        </div>
+      </a>
+      <div class="botoes-cabecalho">
+        <div id="botoes-nao-logado" class="botoes-cabecalho">
+          <button class="btn btn-claro" onclick="abrirLogin()">Entrar</button>
+          <button class="btn btn-primario" onclick="abrirCadastro()">Cadastrar</button>
+        </div>
+        <div id="botoes-logado" class="botoes-cabecalho oculto">
+          <span id="nome-usuario"></span>
+          <button class="btn btn-claro" onclick="sair()">Sair</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main>
     <div id="pagina-inicio">
       <div class="card">
         <h2>🎉 Bingos Disponíveis</h2>
@@ -74,81 +118,96 @@
       </div>
     </div>
 
-    <!-- NAVEGAÇÃO — SÓ APARECE DEPOIS DE LOGAR -->
     <nav id="navegacao-logado" class="barra-navegacao oculto">
-      <a href="#" class="ativo" data-pagina="inicio">🏠 Início</a>
+      <a href="#" data-pagina="inicio" class="ativo">🏠 Início</a>
       <a href="#" data-pagina="meus-bingos">🎟️ Minhas Cartelas</a>
-      <a href="#" id="link-criar" class="oculto" data-pagina="criar">➕ Criar Bingo</a>
-      <a href="#" id="link-admin" class="oculto" data-pagina="admin">⚙️ Admin</a>
+      <a href="#" id="link-criar" data-pagina="criar" class="oculto">➕ Criar Bingo</a>
+      <a href="#" id="link-admin" data-pagina="admin" class="oculto">⚙️ Painel Admin</a>
     </nav>
 
-    <!-- PÁGINAS INTERNAS -->
     <div id="paginas-internas" class="oculto">
       <div id="pagina-meus-bingos" class="card" style="display:none">
         <h2>🎟️ Minhas Cartelas</h2>
         <div id="minhas-cartelas"></div>
       </div>
-
       <div id="pagina-criar" class="card" style="display:none">
         <h2>➕ Criar Novo Bingo</h2>
         <div id="aviso-criar"></div>
         <div class="grupo-input"><label>Nome do Bingo</label><input type="text" id="bingo-nome"></div>
         <div class="grupo-input"><label>Prêmio (objeto)</label><input type="text" id="bingo-premio"></div>
         <div class="grupo-input"><label>Data e Horário</label><input type="datetime-local" id="bingo-data"></div>
-        <div class="grupo-input"><label>Preço da Cartela (R$)</label><input type="number" step="0.01" id="bingo-preco"></div>
+        <div class="grupo-input"><label>Valor da Cartela (R$)</label><input type="number" step="0.01" id="bingo-preco"></div>
         <div class="grupo-input"><label>Total de cartelas</label><input type="number" id="bingo-max" value="500"></div>
         <div class="grupo-input"><label>Por pessoa</label><input type="number" id="bingo-limite" value="3"></div>
-        <button class="btn btn-primario" onclick="criarBingo()">Salvar</button>
-        <div style="margin-top:30px">
-          <h3>Meus Bingos</h3>
-          <div id="lista-meus-bingos"></div>
-        </div>
+        <button class="btn btn-primario" onclick="criarBingo()">Criar Bingo</button>
+        <div style="margin-top:40px"><h3>Meus Bingos</h3><div id="lista-meus-bingos"></div></div>
       </div>
-
       <div id="pagina-admin" class="card" style="display:none">
         <h2>🏛️ Instituições Pendentes</h2>
         <div id="lista-instituicoes"></div>
       </div>
     </div>
 
-    <!-- SALA DO SORTEIO -->
     <div id="sala-sorteio" class="card oculto">
       <div id="conteudo-sala"></div>
       <button class="btn" style="margin-top:20px" onclick="voltarLista()">← Voltar aos Bingos</button>
     </div>
-  </div>
+  </main>
 
-  <!-- MODAL DE LOGIN -->
+  <!-- RODAPÉ -->
+  <footer class="rodape">
+    <div class="rodape-conteudo">
+      <div class="rodape-logo"><span style="font-size:1.8rem">🎯</span><h3>Bingo Digital</h3></div>
+      <div class="rodape-texto">
+        <p>Plataforma de bingos beneficentes — operação transparente, legal e regulamentada.</p>
+        <p>Prêmios em objetos físicos • Taxa de 5% • Pagamentos via PIX</p>
+        <p style="margin-top:8px">© 2026 Bingo Social — Todos os direitos reservados</p>
+      </div>
+      <div class="rodape-links">
+        <a href="#" onclick="voltarInicio(); return false;">Página Inicial</a>
+        <a href="#">Termos de Uso</a>
+        <a href="#">Política de Privacidade</a>
+        <a href="#">Contato</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL DE LOGIN/CADASTRO COM ROLAGEM -->
   <div id="modal-login" class="modal oculto">
     <div class="modal-conteudo">
       <span class="fechar" onclick="fecharModais()">&times;</span>
       <h2 id="titulo-modal">Entrar</h2>
       <div id="aviso-modal"></div>
+      
       <div id="form-login">
         <div class="grupo-input"><label>E-mail</label><input type="email" id="email-login"></div>
         <div class="grupo-input"><label>Senha</label><input type="password" id="senha-login"></div>
-        <button class="btn btn-primario" onclick="fazerLogin()">Entrar</button>
-        <p style="margin-top:15px">Não tem conta? <a href="#" onclick="trocarParaCadastro()">Cadastre-se</a></p>
+        <button class="btn btn-primario" style="width:100%" onclick="fazerLogin()">Entrar</button>
+        <p style="margin-top:15px;text-align:center">Não tem conta? <a href="#" onclick="trocarParaCadastro()">Cadastre-se</a></p>
       </div>
+      
       <div id="form-cadastro" class="oculto">
         <div class="grupo-input">
-          <label>Tipo de conta</label>
+          <label>Tipo de Conta</label>
           <select id="tipo-conta" onchange="mudarTipo()">
             <option value="jogador">🎟️ Jogador</option>
-            <option value="instituicao">🏛️ Instituição</option>
+            <option value="instituicao">🏛️ Instituição Beneficente</option>
           </select>
         </div>
-        <div class="grupo-input"><label>Nome</label><input type="text" id="nome-cad"></div>
+        <div class="grupo-input"><label>Nome Completo</label><input type="text" id="nome-cad"></div>
         <div class="grupo-input"><label>E-mail</label><input type="email" id="email-cad"></div>
-        <div class="grupo-input"><label>Telefone</label><input type="tel" id="tel-cad"></div>
+        <div class="grupo-input"><label>Telefone / WhatsApp</label><input type="tel" id="tel-cad"></div>
         <div class="grupo-input"><label>Senha</label><input type="password" id="senha-cad"></div>
-        <div id="campos-inst" class="oculto">
+        
+        <div id="campos-inst" class="oculto" style="border-top:1px dashed #ddd;padding-top:15px;margin-top:10px">
           <div class="grupo-input"><label>CNPJ</label><input type="text" id="cnpj-cad"></div>
-          <div class="grupo-input"><label>Endereço</label><input type="text" id="end-cad"></div>
-          <div class="grupo-input"><label>Responsável</label><input type="text" id="resp-cad"></div>
+          <div class="grupo-input"><label>Endereço Completo</label><input type="text" id="end-cad"></div>
+          <div class="grupo-input"><label>Responsável Legal</label><input type="text" id="resp-cad"></div>
+          <div class="grupo-input"><label>Chave PIX da Instituição</label><input type="text" id="chave-pix-cad" placeholder="Onde recebe 95% do valor"></div>
         </div>
-        <button class="btn btn-primario" onclick="fazerCadastro()">Cadastrar</button>
-        <p style="margin-top:15px">Já tem conta? <a href="#" onclick="trocarParaLogin()">Entrar</a></p>
+        
+        <button class="btn btn-primario" style="width:100%;margin-top:15px" onclick="fazerCadastro()">Finalizar Cadastro</button>
+        <p style="margin-top:15px;text-align:center">Já tem conta? <a href="#" onclick="trocarParaLogin()">Entrar</a></p>
       </div>
     </div>
   </div>

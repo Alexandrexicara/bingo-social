@@ -1,72 +1,80 @@
-const sqlite3 = require('sqlite3').verbose();
-const { DB_FILE } = require('./config');
-const bcrypt = require('bcryptjs');
+const { Pool } = require('pg');
+require('dotenv').config();
 
-const db = new sqlite3.Database(DB_FILE, (err) => {
-  if (err) console.error('❌ Erro BD:', err.message);
-  else console.log('✅ BD Conectado');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS usuarios (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tipo TEXT NOT NULL CHECK(tipo IN ('admin','instituicao','jogador')),
-    nome TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    senha TEXT NOT NULL,
-    telefone TEXT,
-    cnpj TEXT,
-    endereco TEXT,
-    responsavel TEXT,
-    alvará_arquivo TEXT,
-    status TEXT DEFAULT 'pendente' CHECK(status IN ('pendente','aprovado','rejeitado')),
-    data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+async function criarTabelas() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS usuarios (
+        id SERIAL PRIMARY KEY,
+        tipo VARCHAR(20) NOT NULL,
+        nome VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        senha VARCHAR(255) NOT NULL,
+        telefone VARCHAR(20),
+        cnpj VARCHAR(20),
+        endereco TEXT,
+        responsavel VARCHAR(255),
+        chave_pix TEXT,
+        status VARCHAR(20) DEFAULT 'pendente',
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
 
-  db.run(`CREATE TABLE IF NOT EXISTS bingos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    instituicao_id INTEGER NOT NULL,
-    nome TEXT NOT NULL,
-    descricao TEXT,
-    premio_nome TEXT NOT NULL,
-    premio_foto TEXT,
-    data_sorteio DATETIME NOT NULL,
-    preco_cartela REAL NOT NULL,
-    max_cartelas INTEGER DEFAULT 1000,
-    qtd_cartelas_por_pessoa INTEGER DEFAULT 5,
-    status TEXT DEFAULT 'rascunho' CHECK(status IN ('rascunho','publicado','em_andamento','finalizado')),
-    taxa_aplicada REAL NOT NULL,
-    FOREIGN KEY (instituicao_id) REFERENCES usuarios(id)
-  )`);
+      CREATE TABLE IF NOT EXISTS bingos (
+        id SERIAL PRIMARY KEY,
+        usuario_id INT REFERENCES usuarios(id),
+        nome VARCHAR(255) NOT NULL,
+        premio VARCHAR(255) NOT NULL,
+        data_sorteio TIMESTAMP NOT NULL,
+        preco_cartela DECIMAL(10,2) NOT NULL,
+        max_cartelas INT DEFAULT 500,
+        limite_por_pessoa INT DEFAULT 3,
+        status VARCHAR(20) DEFAULT 'rascunho',
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
 
-  db.run(`CREATE TABLE IF NOT EXISTS cartelas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    bingo_id INTEGER NOT NULL,
-    jogador_id INTEGER NOT NULL,
-    numeros TEXT NOT NULL,
-    codigo TEXT UNIQUE NOT NULL,
-    comprado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (bingo_id) REFERENCES bingos(id),
-    FOREIGN KEY (jogador_id) REFERENCES usuarios(id)
-  )`);
+      CREATE TABLE IF NOT EXISTS cartelas (
+        id SERIAL PRIMARY KEY,
+        bingo_id INT REFERENCES bingos(id),
+        usuario_id INT REFERENCES usuarios(id),
+        codigo VARCHAR(50) UNIQUE NOT NULL,
+        numeros INT[] NOT NULL,
+        paga BOOLEAN DEFAULT false,
+        criada_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
 
-  db.run(`CREATE TABLE IF NOT EXISTS sorteios (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    bingo_id INTEGER NOT NULL,
-    numero INTEGER NOT NULL,
-    ordem INTEGER NOT NULL,
-    sorteado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (bingo_id) REFERENCES bingos(id)
-  )`);
-
-  db.get("SELECT id FROM usuarios WHERE email = 'admin@bingo'", (err, row) => {
-    if (!row) {
-      bcrypt.hash('admin@bingo', 10, (err, hash) => {
-        db.run(`INSERT INTO usuarios (tipo, nome, email, senha, status) VALUES (?, ?, ?, ?, ?)`,
-          ['admin', 'Administrador', 'admin@bingo', hash, 'aprovado']);
-      });
+      CREATE TABLE IF NOT EXISTS sorteios (
+        id SERIAL PRIMARY KEY,
+        bingo_id INT REFERENCES bingos(id),
+        numero INT NOT NULL,
+        ordem INT NOT NULL,
+        sorteado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    // Verifica se admin existe
+    const admin = await client.query("SELECT id FROM usuarios WHERE email = 'admin@bingo'");
+    if (admin.rows.length === 0) {
+      const bcrypt = require('bcryptjs');
+      const senhaHash = await bcrypt.hash('admin@bingo', 10);
+      await client.query(`
+        INSERT INTO usuarios (tipo, nome, email, senha, status)
+        VALUES ('admin', 'Administrador', 'admin@bingo', $1, 'aprovado')
+      `, [senhaHash]);
+      console.log('✅ Admin criado: admin@bingo / senha: admin@bingo');
     }
-  });
-});
 
-module.exports = db;
+    console.log('✅ Tabelas prontas no Neon!');
+  } catch (err) {
+    console.error('❌ Erro nas tabelas:', err);
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { pool, criarTabelas };
