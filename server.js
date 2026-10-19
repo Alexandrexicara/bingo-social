@@ -4,35 +4,21 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const WebSocket = require('ws');
+const axios = require('axios');
 const { pool, criarTabelas } = require('./database');
+const config = require('./config');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'chave_temporaria';
-const TAXA = parseFloat(process.env.TAXA_PLATAFORMA || 5);
+const PORT = config.PORT;
+const JWT_SECRET = config.JWT_SECRET;
+const TAXA = config.TAXA_PADRAO;
+const WOOVI = config.WOOVI;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-const wss = new WebSocket.Server({ noServer: true });
-const clientes = [];
-
-wss.on('connection', (ws) => {
-  clientes.push(ws);
-  ws.on('close', () => {
-    const idx = clientes.indexOf(ws);
-    if (idx !== -1) clientes.splice(idx, 1);
-  });
-});
-
-function notificarTodos(dados) {
-  clientes.forEach(c => {
-    if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify(dados));
-  });
-}
-
-// Middleware de autenticação
+// ========== AUTENTICAÇÃO ==========
 function autenticar(req, res, next) {
   const cabecalho = req.headers.authorization;
   if (!cabecalho) return res.status(401).json({erro: 'Não autorizado'});
@@ -45,7 +31,28 @@ function autenticar(req, res, next) {
   }
 }
 
-// Gerar números de cartela
+// ========== WOOVI — CRIAR COBRANÇA ==========
+async function criarCobrancaPix(valor, chaveDestino, descricao) {
+  try {
+    const resposta = await axios.post(`${WOOVI.API_URL}/v2/cob`, {
+      calha: { chave: chaveDestino },
+      valor: valor.toFixed(2),
+      descricao: descricao
+    }, {
+      headers: {
+        'client_id': WOOVI.CLIENT_ID,
+        'client_secret': WOOVI.CLIENT_SECRET,
+        'Content-Type': 'application/json'
+      }
+    });
+    return resposta.data;
+  } catch (erro) {
+    console.error('Erro Woovi:', erro.response?.data || erro.message);
+    throw new Error('Não foi possível gerar o PIX');
+  }
+}
+
+// ========== GERAR CARTELA ==========
 function gerarCartela() {
   const colunas = [[], [], [], [], []];
   const mins = [1, 16, 31, 46, 61];
@@ -56,14 +63,19 @@ function gerarCartela() {
       if (!colunas[c].includes(n)) colunas[c].push(n);
     }
   }
-  colunas[2][2] = 0; // centro livre
+  colunas[2][2] = 0;
   return colunas.flat();
 }
 
-// Cadastro
+// ========== CADASTRO — CNPJ OBRIGATÓRIO ==========
 app.post('/api/auth/register', async (req, res) => {
   try {
     const {tipo, nome, email, senha, telefone, cnpj, endereco, responsavel, chave_pix} = req.body;
+    
+    if (tipo === 'instituicao' && !cnpj) {
+      return res.status(400).json({erro: 'CNPJ é OBRIGATÓRIO para instituições!'});
+    }
+    
     const senhaHash = await bcrypt.hash(senha, 10);
     const status = tipo === 'jogador' ? 'aprovado' : 'pendente';
     
@@ -72,13 +84,19 @@ app.post('/api/auth/register', async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *
     `, [tipo, nome, email, senhaHash, telefone, cnpj, endereco, responsavel, chave_pix, status]);
     
-    res.status(201).json({mensagem: 'Cadastro realizado', usuario: resultado.rows[0]});
+    res.status(201).json({
+      mensagem: tipo==='instituicao' 
+        ? 'Cadastro recebido! Aguarde aprovação do administrador.' 
+        : 'Conta criada com sucesso!',
+      usuario: resultado.rows[0]
+    });
   } catch (err) {
-    res.status(400).json({erro: 'E-mail já cadastrado'});
+    console.error(err);
+    res.status(400).json({erro: 'E-mail já cadastrado ou erro nos dados'});
   }
 });
 
-// Login
+// ========== LOGIN ==========
 app.post('/api/auth/login', async (req, res) => {
   const {email, senha} = req.body;
   const {rows} = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
@@ -96,18 +114,18 @@ app.post('/api/auth/login', async (req, res) => {
   res.json({token, usuario: {id: usuario.id, nome: usuario.nome, tipo: usuario.tipo}});
 });
 
-// Listar bingos publicos
+// ========== LISTAR BINGOS ==========
 app.get('/api/bingos', async (req, res) => {
   const {rows} = await pool.query(`
-    SELECT b.*, u.nome as instituicao_nome FROM bingos b
-    JOIN usuarios u ON b.usuario_id = u.id
+    SELECT b.*, u.nome as instituicao_nome
+    FROM bingos b JOIN usuarios u ON b.usuario_id = u.id
     WHERE b.status = 'publicado' OR b.status = 'em_andamento'
     ORDER BY b.data_sorteio DESC
   `);
   res.json(rows);
 });
 
-// Criar bingo (instituicao)
+// ========== CRIAR BINGO ==========
 app.post('/api/bingos', autenticar, async (req, res) => {
   if (req.usuario.tipo !== 'instituicao' && req.usuario.tipo !== 'admin') {
     return res.status(403).json({erro: 'Sem permissão'});
@@ -120,44 +138,111 @@ app.post('/api/bingos', autenticar, async (req, res) => {
   res.status(201).json(rows[0]);
 });
 
-// Publicar bingo
+// ========== PUBLICAR BINGO ==========
 app.patch('/api/bingos/:id/publicar', autenticar, async (req, res) => {
   const {rows} = await pool.query(`UPDATE bingos SET status = 'publicado' WHERE id = $1 RETURNING *`, [req.params.id]);
   res.json(rows[0]);
 });
 
-// Comprar/gerar cartela
+// ========== COMPRAR CARTELA — COM PIX AUTOMÁTICO ==========
 app.post('/api/bingos/:id/cartela', autenticar, async (req, res) => {
   const bingoId = req.params.id;
+  
+  const bingoResult = await pool.query('SELECT * FROM bingos WHERE id = $1', [bingoId]);
+  if (!bingoResult.rows.length) return res.status(404).json({erro: 'Bingo não encontrado'});
+  const bingo = bingoResult.rows[0];
+  
+  const instResult = await pool.query('SELECT chave_pix, nome FROM usuarios WHERE id = $1', [bingo.usuario_id]);
+  if (!instResult.rows.length) return res.status(404).json({erro: 'Instituição não encontrada'});
+  const instituicao = instResult.rows[0];
+  
+  const valorTotal = parseFloat(bingo.preco_cartela);
+  const valorPlataforma = +(valorTotal * TAXA / 100).toFixed(2);
+  const valorInstituicao = +(valorTotal - valorPlataforma).toFixed(2);
+  
   const codigo = 'B' + bingoId + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
   const numeros = gerarCartela();
   
-  const {rows} = await pool.query(`
-    INSERT INTO cartelas (bingo_id, usuario_id, codigo, numeros, paga)
-    VALUES ($1, $2, $3, $4, true) RETURNING *
-  `, [bingoId, req.usuario.id, codigo, numeros]);
+  // Cria cobrança na Woovi — divisão automática
+  let cobranca = null;
+  try {
+    cobranca = await criarCobrancaPix(
+      valorTotal,
+      instituicao.chave_pix,
+      `Bingo: ${bingo.nome} — Cartela ${codigo}`
+    );
+  } catch (e) {
+    return res.status(500).json({erro: 'Erro ao gerar PIX: ' + e.message});
+  }
   
-  res.json(rows[0]);
+  // Salva cartela ainda não paga
+  const cartelaResult = await pool.query(`
+    INSERT INTO cartelas (bingo_id, usuario_id, codigo, numeros, paga, txid_woovi)
+    VALUES ($1, $2, $3, $4, false, $5) RETURNING *
+  `, [bingoId, req.usuario.id, codigo, numeros, cobranca.txid || cobranca.id]);
+  
+  await pool.query(`
+    INSERT INTO pagamentos (cartela_id, valor_total, valor_plataforma, valor_instituicao, txid, status)
+    VALUES ($1, $2, $3, $4, $5, 'pendente')
+  `, [cartelaResult.rows[0].id, valorTotal, valorPlataforma, valorInstituicao, cobranca.txid || cobranca.id]);
+  
+  res.status(201).json({
+    ...cartelaResult.rows[0],
+    qr_code: cobranca.qr_code || cobranca.imagemQrcode,
+    pix_copia_cola: cobranca.pixCopiaECola,
+    valor_total: valorTotal,
+    txid: cobranca.txid || cobranca.id,
+    mensagem: 'PIX gerado! Pagamento confirmado automaticamente.'
+  });
 });
 
-// Meus bingos/compras
+// ========== WEBHOOK WOOVI — CONFIRMA PAGAMENTO SOZINHO ==========
+app.post('/api/webhook/woovi', async (req, res) => {
+  const {txid, status} = req.body;
+  
+  if (!txid || status !== 'concluida') {
+    return res.status(200).json({ok: true});
+  }
+  
+  // Marca cartela como paga
+  const resultado = await pool.query(`
+    UPDATE cartelas SET paga = true WHERE txid_woovi = $1 RETURNING *
+  `, [txid]);
+  
+  if (resultado.rows.length > 0) {
+    await pool.query(`
+      UPDATE pagamentos SET status = 'concluido' WHERE txid = $1
+    `, [txid]);
+    console.log('✅ Pagamento confirmado! Cartela liberada:', resultado.rows[0].codigo);
+  }
+  
+  res.status(200).json({ok: true});
+});
+
+// ========== MINHAS CARTELAS ==========
 app.get('/api/minhas-cartelas', autenticar, async (req, res) => {
   const {rows} = await pool.query(`
-    SELECT c.*, b.nome as bingo_nome, b.premio, b.data_sorteio
+    SELECT c.*, b.nome as bingo_nome, b.premio, b.data_sorteio, b.preco_cartela
     FROM cartelas c JOIN bingos b ON c.bingo_id = b.id
     WHERE c.usuario_id = $1 ORDER BY b.data_sorteio DESC
   `, [req.usuario.id]);
   res.json(rows);
 });
 
-// Iniciar sorteio
+// ========== DADOS DE UM BINGO ==========
+app.get('/api/bingos/:id', async (req, res) => {
+  const bingo = await pool.query('SELECT * FROM bingos WHERE id = $1', [req.params.id]);
+  const sorteados = await pool.query('SELECT numero FROM sorteios WHERE bingo_id = $1 ORDER BY ordem', [req.params.id]);
+  res.json({bingo: bingo.rows[0], sorteados: sorteados.rows.map(r => r.numero)});
+});
+
+// ========== INICIAR SORTEIO ==========
 app.post('/api/bingos/:id/iniciar', autenticar, async (req, res) => {
   await pool.query(`UPDATE bingos SET status = 'em_andamento' WHERE id = $1`, [req.params.id]);
-  notificarTodos({tipo: 'INICIO_SORTEIO', bingoId: req.params.id});
   res.json({mensagem: 'Sorteio iniciado'});
 });
 
-// Sortear numero
+// ========== SORTEAR NÚMERO ==========
 app.post('/api/bingos/:id/sortear', autenticar, async (req, res) => {
   const {rows: ultimos} = await pool.query(`SELECT numero FROM sorteios WHERE bingo_id = $1`, [req.params.id]);
   const jaSorteados = ultimos.map(r => r.numero);
@@ -166,41 +251,34 @@ app.post('/api/bingos/:id/sortear', autenticar, async (req, res) => {
   do { numero = Math.floor(Math.random() * 75) + 1; } while (jaSorteados.includes(numero) && jaSorteados.length < 75);
   if (jaSorteados.length >= 75) return res.status(400).json({erro: 'Todos os números já sorteados'});
   
-  await pool.query(`
-    INSERT INTO sorteios (bingo_id, numero, ordem) VALUES ($1, $2, $3)
-  `, [req.params.id, numero, jaSorteados.length + 1]);
-  
-  notificarTodos({tipo: 'NOVO_NUMERO', bingoId: req.params.id, numero});
+  await pool.query(`INSERT INTO sorteios (bingo_id, numero, ordem) VALUES ($1, $2, $3)`, [req.params.id, numero, jaSorteados.length + 1]);
   res.json({numero});
 });
 
-// Aprovar instituicao (admin)
+// ========== APROVAR INSTITUIÇÃO ==========
 app.patch('/api/usuarios/:id/aprovar', autenticar, async (req, res) => {
   if (req.usuario.tipo !== 'admin') return res.status(403).json({erro: 'Sem permissão'});
   const {rows} = await pool.query(`UPDATE usuarios SET status = 'aprovado' WHERE id = $1 RETURNING *`, [req.params.id]);
   res.json(rows[0]);
 });
 
-// Listar instituicoes pendentes (admin)
+// ========== LISTAR INSTITUIÇÕES PENDENTES ==========
 app.get('/api/admin/instituicoes', autenticar, async (req, res) => {
   if (req.usuario.tipo !== 'admin') return res.status(403).json({erro: 'Sem permissão'});
   const {rows} = await pool.query(`SELECT * FROM usuarios WHERE tipo = 'instituicao' AND status = 'pendente'`);
   res.json(rows);
 });
 
-// Dados de um bingo
-app.get('/api/bingos/:id', async (req, res) => {
-  const bingo = await pool.query('SELECT * FROM bingos WHERE id = $1', [req.params.id]);
-  const sorteados = await pool.query('SELECT numero FROM sorteios WHERE bingo_id = $1 ORDER BY ordem', [req.params.id]);
-  res.json({bingo: bingo.rows[0], sorteados: sorteados.rows.map(r => r.numero)});
+// ========== MEUS BINGOS (INSTITUIÇÃO) ==========
+app.get('/api/meus-bingos', autenticar, async (req, res) => {
+  const {rows} = await pool.query(`SELECT * FROM bingos WHERE usuario_id = $1 ORDER BY criado_em DESC`, [req.usuario.id]);
+  res.json(rows);
 });
 
+// ========== INICIAR SERVIDOR ==========
 async function iniciar() {
   await criarTabelas();
-  const servidor = app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-  servidor.on('upgrade', (req, soc, cab) => {
-    wss.handleUpgrade(req, soc, cab, (ws) => wss.emit('connection', ws, req));
-  });
+  app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
 }
 
 iniciar().catch(console.error);

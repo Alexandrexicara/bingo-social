@@ -17,10 +17,10 @@ async function criarTabelas() {
         email VARCHAR(255) UNIQUE NOT NULL,
         senha VARCHAR(255) NOT NULL,
         telefone VARCHAR(20),
-        cnpj VARCHAR(20),
+        cnpj VARCHAR(30),
         endereco TEXT,
         responsavel VARCHAR(255),
-        chave_pix TEXT,
+        chave_pix TEXT NOT NULL,
         status VARCHAR(20) DEFAULT 'pendente',
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -45,7 +45,19 @@ async function criarTabelas() {
         codigo VARCHAR(50) UNIQUE NOT NULL,
         numeros INT[] NOT NULL,
         paga BOOLEAN DEFAULT false,
+        txid_woovi VARCHAR(100),
         criada_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS pagamentos (
+        id SERIAL PRIMARY KEY,
+        cartela_id INT REFERENCES cartelas(id),
+        valor_total DECIMAL(10,2) NOT NULL,
+        valor_plataforma DECIMAL(10,2) NOT NULL,
+        valor_instituicao DECIMAL(10,2) NOT NULL,
+        txid VARCHAR(100),
+        status VARCHAR(20) DEFAULT 'pendente',
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS sorteios (
@@ -56,20 +68,19 @@ async function criarTabelas() {
         sorteado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    
-    // Verifica se admin existe
+
+    const bcrypt = require('bcryptjs');
     const admin = await client.query("SELECT id FROM usuarios WHERE email = 'admin@bingo'");
     if (admin.rows.length === 0) {
-      const bcrypt = require('bcryptjs');
       const senhaHash = await bcrypt.hash('admin@bingo', 10);
       await client.query(`
-        INSERT INTO usuarios (tipo, nome, email, senha, status)
-        VALUES ('admin', 'Administrador', 'admin@bingo', $1, 'aprovado')
+        INSERT INTO usuarios (tipo, nome, email, senha, status, chave_pix)
+        VALUES ('admin', 'Administrador', 'admin@bingo', $1, 'aprovado', 'sem-chave')
       `, [senhaHash]);
       console.log('✅ Admin criado: admin@bingo / senha: admin@bingo');
     }
 
-    console.log('✅ Tabelas prontas no Neon!');
+    console.log('✅ Tabelas prontas! CNPJ OBRIGATÓRIO para instituições ✅');
   } catch (err) {
     console.error('❌ Erro nas tabelas:', err);
   } finally {
