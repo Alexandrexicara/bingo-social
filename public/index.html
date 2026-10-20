@@ -3,13 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bingo Social 🎯</title>
+  <title>Bingo Digital 🎯</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
-    :root{--primario:#622ea0;--secundario:#f97316;--claro:#f8fafc;--escuro:#1e293b;--acerto:#10b981;--erro:#ef4444}
+    :root{--primario:#622ea0;--secundario:#f97316;--claro:#f8fafc;--escuro:#1e293b;--acerto:#10b981;--erro:#ef4444;--aviso:#fef3c7;--aviso-texto:#92400e}
     body{background:linear-gradient(135deg,var(--primario),#4c1d7c);min-height:100vh;color:white;display:flex;flex-direction:column}
-    
-    /* ========== CABEÇALHO ========== */
     header.cabecalho{background:rgba(255,255,255,.15);backdrop-filter:blur(10px);padding:15px 25px;border-bottom:1px solid rgba(255,255,255,.2);position:sticky;top:0;z-index:999}
     .cabecalho-conteudo{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px}
     .logo-area{display:flex;align-items:center;gap:12px;text-decoration:none;color:white}
@@ -17,16 +15,10 @@
     .logo-texto h1{font-size:1.4rem;line-height:1.2}
     .logo-texto p{font-size:.85rem;opacity:.8}
     .botoes-cabecalho{display:flex;gap:10px;align-items:center}
-    
-    /* ========== CONTEÚDO PRINCIPAL ========== */
     main{flex:1;padding:25px;max-width:1200px;margin:0 auto;width:100%}
-    
-    /* ========== NAVEGAÇÃO ========== */
     .barra-navegacao{background:rgba(255,255,255,.1);border-radius:12px;padding:15px;margin:20px 0;display:flex;gap:10px;flex-wrap:wrap}
     .barra-navegacao a{color:white;text-decoration:none;padding:10px 20px;border-radius:8px;transition:.3s}
     .barra-navegacao a:hover,.barra-navegacao a.ativo{background:var(--secundario)}
-    
-    /* ========== BINGOS ========== */
     .card{background:white;border-radius:16px;padding:25px;color:var(--escuro);box-shadow:0 8px 30px rgba(0,0,0,.2);margin-bottom:20px}
     .card h2{color:var(--primario);margin-bottom:15px}
     .banner-bingo{background:linear-gradient(90deg,var(--primario),#7c3aed);border-radius:12px;padding:20px;margin-bottom:15px;cursor:pointer;transition:.3s;color:white}
@@ -40,8 +32,6 @@
     .etiqueta.rascunho{background:#e5e7eb;color:#4b5563}
     .etiqueta.publicado{background:#dbeafe;color:#1e40af}
     .etiqueta.em_andamento{background:#fef3c7;color:#92400e}
-    
-    /* ========== BOTÕES ========== */
     .btn{padding:10px 20px;border:none;border-radius:8px;font-size:1rem;font-weight:bold;cursor:pointer;transition:.3s;text-decoration:none;display:inline-block;text-align:center}
     .btn-primario{background:var(--secundario);color:white}
     .btn-primario:hover{background:#e86509}
@@ -49,33 +39,26 @@
     .btn-claro:hover{background:#f0f0f0}
     .btn-sucesso{background:var(--acerto);color:white}
     .btn-sucesso:hover{background:#0da271}
-    
-    /* ========== FORMULÁRIOS ========== */
     .grupo-input{margin-bottom:15px}
     label{display:block;margin-bottom:5px;font-weight:bold;color:#444}
-    input,select{width:100%;padding:12px;border:2px solid #ddd;border-radius:8px;font-size:1rem}
+    input,select,textarea{width:100%;padding:12px;border:2px solid #ddd;border-radius:8px;font-size:1rem}
     input:focus{outline:none;border-color:var(--primario)}
-    
-    /* ========== MODAL COM ROLAGEM ========== */
     .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);display:flex;align-items:flex-start;justify-content:center;z-index:1000;padding:20px;overflow-y:auto}
-    .modal-conteudo{background:white;border-radius:16px;padding:25px;max-width:420px;width:100%;color:var(--escuro);margin:20px 0}
+    .modal-conteudo{background:white;border-radius:16px;padding:25px;max-width:480px;width:100%;color:var(--escuro);margin:20px 0}
     .fechar{float:right;cursor:pointer;font-size:1.3rem;color:#888;margin-top:-5px}
-    
-    /* ========== AVISOS ========== */
     .aviso{padding:12px;border-radius:8px;margin:15px 0}
     .aviso.sucesso{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
     .aviso.erro{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
-    
-    /* ========== RODAPÉ ========== */
-    footer.rodape{background:rgba(0,0,0,.2);padding:30px 25px;margin-top:40px;border-top:1px solid rgba(255,255,255,.15)}
-    .rodape-conteudo{max-width:1200px;margin:0 auto;text-align:center}
-    .rodape-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:15px}
-    .rodape-texto{opacity:.75;font-size:.9rem;line-height:1.6}
-    .rodape-links{margin-top:15px;display:flex;justify-content:center;gap:20px;flex-wrap:wrap}
-    .rodape-links a{color:white;opacity:.75;text-decoration:none}
-    .rodape-links a:hover{opacity:1;text-decoration:underline}
-    
-    /* ========== UTILITÁRIOS ========== */
+    .aviso.info{background:var(--aviso);color:var(--aviso-texto);border:1px solid #fcd34d}
+    .instrucoes{background:#f0f9ff;border-left:4px solid #3b82f6;padding:15px;margin:15px 0;border-radius:0 8px 8px 0}
+    .instrucoes h4{color:#1e40af;margin-bottom:8px}
+    .instrucoes ol{margin-left:20px}
+    .instrucoes li{margin:5px 0}
+    .instrucoes a{color:#3b82f6;font-weight:bold;text-decoration:none}
+    .instrucoes a:hover{text-decoration:underline}
+    .rodape{background:rgba(0,0,0,.2);padding:30px 25px;margin-top:40px;border-top:1px solid rgba(255,255,255,.15);text-align:center}
+    .rodape a{color:white;opacity:.75;text-decoration:none;margin:0 10px}
+    .rodape a:hover{opacity:1}
     .oculto{display:none !important}
     table{border-collapse:collapse;margin:0 auto}
     td,th{width:40px;height:40px;border:1px solid #ccc;text-align:center}
@@ -85,7 +68,6 @@
 </head>
 <body>
 
-  <!-- CABEÇALHO -->
   <header class="cabecalho">
     <div class="cabecalho-conteudo">
       <a href="#" class="logo-area" onclick="voltarInicio(); return false;">
@@ -108,7 +90,6 @@
     </div>
   </header>
 
-  <!-- CONTEÚDO PRINCIPAL -->
   <main>
     <div id="pagina-inicio">
       <div class="card">
@@ -154,25 +135,15 @@
     </div>
   </main>
 
-  <!-- RODAPÉ -->
   <footer class="rodape">
-    <div class="rodape-conteudo">
-      <div class="rodape-logo"><span style="font-size:1.8rem">🎯</span><h3>Bingo Digital</h3></div>
-      <div class="rodape-texto">
-        <p>Plataforma de bingos beneficentes — operação transparente, legal e regulamentada.</p>
-        <p>Prêmios em objetos físicos • Taxa de 5% • Pagamentos via PIX</p>
-        <p style="margin-top:8px">© 2026 Bingo Social — Todos os direitos reservados</p>
-      </div>
-      <div class="rodape-links">
-        <a href="#" onclick="voltarInicio(); return false;">Página Inicial</a>
-        <a href="#">Termos de Uso</a>
-        <a href="#">Política de Privacidade</a>
-        <a href="#">Contato</a>
-      </div>
-    </div>
+    <p>© 2026 Bingo Digital — Pagamentos via Woovi • Taxa de 5%</p>
+    <p style="margin-top:10px">
+      <a href="https://woovi.com" target="_blank">🔗 Acessar Woovi</a>
+      |
+      <a href="#" onclick="abrirCadastro(); return false;">Como obter minha API?</a>
+    </p>
   </footer>
 
-  <!-- MODAL DE LOGIN/CADASTRO COM ROLAGEM -->
   <div id="modal-login" class="modal oculto">
     <div class="modal-conteudo">
       <span class="fechar" onclick="fecharModais()">&times;</span>
@@ -191,19 +162,61 @@
           <label>Tipo de Conta</label>
           <select id="tipo-conta" onchange="mudarTipo()">
             <option value="jogador">🎟️ Jogador</option>
-            <option value="instituicao">🏛️ Instituição Beneficente</option>
+            <option value="instituicao">🏛️ Instituição / Grupo</option>
           </select>
         </div>
-        <div class="grupo-input"><label>Nome Completo</label><input type="text" id="nome-cad"></div>
+        <div class="grupo-input"><label>Nome Completo / Razão Social</label><input type="text" id="nome-cad"></div>
         <div class="grupo-input"><label>E-mail</label><input type="email" id="email-cad"></div>
         <div class="grupo-input"><label>Telefone / WhatsApp</label><input type="tel" id="tel-cad"></div>
         <div class="grupo-input"><label>Senha</label><input type="password" id="senha-cad"></div>
         
         <div id="campos-inst" class="oculto" style="border-top:1px dashed #ddd;padding-top:15px;margin-top:10px">
-          <div class="grupo-input"><label>CNPJ</label><input type="text" id="cnpj-cad"></div>
-          <div class="grupo-input"><label>Endereço Completo</label><input type="text" id="end-cad"></div>
-          <div class="grupo-input"><label>Responsável Legal</label><input type="text" id="resp-cad"></div>
-          <div class="grupo-input"><label>Chave PIX da Instituição</label><input type="text" id="chave-pix-cad" placeholder="Onde recebe 95% do valor"></div>
+          <h3 style="margin-bottom:15px;color:var(--primario)">Dados da Instituição</h3>
+          
+          <div class="instrucoes">
+            <h4>📋 Como pegar suas chaves da Woovi:</h4>
+            <ol>
+              <li>Acesse: <a href="https://woovi.com" target="_blank">woovi.com</a></li>
+              <li>Cadastre sua conta com o CNPJ</li>
+              <li>No painel, vá em <strong>Desenvolvedores → API</strong></li>
+              <li>Copie o <strong>Client ID</strong> e o <strong>Client Secret</strong></li>
+              <li>Cole nos campos abaixo</li>
+              <li>Webhook: <code>https://SEU-DOMINIO/api/webhook/woovi</code></li>
+            </ol>
+          </div>
+          
+          <div class="grupo-input">
+            <label>CNPJ <strong style="color:red">*</strong></label>
+            <input type="text" id="cnpj-cad" placeholder="Digite o CNPJ da instituição">
+          </div>
+          <div class="grupo-input">
+            <label>Endereço Completo <strong style="color:red">*</strong></label>
+            <input type="text" id="end-cad" placeholder="Rua, número, bairro, cidade/UF">
+          </div>
+          <div class="grupo-input">
+            <label>Nome do Responsável <strong style="color:red">*</strong></label>
+            <input type="text" id="resp-cad" placeholder="Quem responde legalmente">
+          </div>
+          <div class="grupo-input">
+            <label>Chave PIX da Instituição <strong style="color:red">*</strong></label>
+            <input type="text" id="chave-pix-cad" placeholder="Onde recebe os valores">
+          </div>
+          
+          <div style="background:#f9fafb;padding:15px;border-radius:8px;margin:15px 0">
+            <h4 style="margin-bottom:10px">🔑 Suas Credenciais da Woovi</h4>
+            <div class="grupo-input">
+              <label>Client ID <strong style="color:red">*</strong></label>
+              <input type="text" id="woovi-id" placeholder="ws_client_xxxxxxxxxxxx">
+            </div>
+            <div class="grupo-input">
+              <label>Client Secret <strong style="color:red">*</strong></label>
+              <input type="password" id="woovi-secret" placeholder="Sua chave secreta">
+            </div>
+            <div class="grupo-input">
+              <label>Webhook Secret (opcional)</label>
+              <input type="text" id="woovi-webhook" placeholder="Senha de confirmação">
+            </div>
+          </div>
         </div>
         
         <button class="btn btn-primario" style="width:100%;margin-top:15px" onclick="fazerCadastro()">Finalizar Cadastro</button>
@@ -215,3 +228,26 @@
   <script src="app.js"></script>
 </body>
 </html>
+<!-- (O restante do HTML continua igual — só adicionar a aba de configurações) -->
+<!-- No menu de navegação do admin, adicione: -->
+<a href="#" data-pagina="configuracoes">⚙️ Configurações da Plataforma</a>
+
+<!-- E a página correspondente: -->
+<div id="pagina-configuracoes" class="card" style="display:none">
+  <h2>⚙️ Configurações da Plataforma</h2>
+  <div id="aviso-config" class="aviso" style="display:none"></div>
+  
+  <div class="grupo-input">
+    <label>💰 Taxa da Plataforma (%)</label>
+    <input type="number" id="config-taxa" step="0.01" min="0" max="100" placeholder="Ex: 5 = 5%">
+    <p style="color:#666;font-size:.85rem;margin-top:5px">Porcentagem descontada de cada cartela. O resto vai para a instituição.</p>
+  </div>
+  
+  <div class="grupo-input">
+    <label>💳 Sua Chave PIX (Plataforma)</label>
+    <input type="text" id="config-chave-pix" placeholder="sua.chave@pix.com.br">
+    <p style="color:#666;font-size:.85rem;margin-top:5px">Para onde vai o valor da sua taxa.</p>
+  </div>
+  
+  <button class="btn btn-primario" onclick="salvarConfiguracoes()">💾 Salvar Alterações</button>
+</div>
