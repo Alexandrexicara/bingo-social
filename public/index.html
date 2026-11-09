@@ -104,6 +104,7 @@
       <a href="#" data-pagina="meus-bingos">🎟️ Minhas Cartelas</a>
       <a href="#" id="link-criar" data-pagina="criar" class="oculto">➕ Criar Bingo</a>
       <a href="#" id="link-admin" data-pagina="admin" class="oculto">⚙️ Painel Admin</a>
+      <a href="#" id="link-configuracoes" data-pagina="configuracoes" class="oculto">💳 Configurações</a>
     </nav>
 
     <div id="paginas-internas" class="oculto">
@@ -126,6 +127,13 @@
       <div id="pagina-admin" class="card" style="display:none">
         <h2>🏛️ Instituições Pendentes</h2>
         <div id="lista-instituicoes"></div>
+      <div id="pagina-configuracoes" class="card" style="display:none">
+        <h2>⚙️ Configurações da Plataforma</h2>
+        <div id="aviso-config"></div>
+        <div class="grupo-input"><label>Taxa da Plataforma (%)</label><input type="number" id="config-taxa" step="0.01" min="0" max="100"></div>
+        <div class="grupo-input"><label>Chave PIX da Plataforma (controle financeiro)</label><input type="text" id="config-chave-pix" placeholder="Chave PIX da plataforma"></div>
+        <button class="btn btn-primario" onclick="salvarConfiguracoes()">Salvar configurações</button>
+      </div>
       </div>
     </div>
 
@@ -173,18 +181,6 @@
         <div id="campos-inst" class="oculto" style="border-top:1px dashed #ddd;padding-top:15px;margin-top:10px">
           <h3 style="margin-bottom:15px;color:var(--primario)">Dados da Instituição</h3>
           
-          <div class="instrucoes">
-            <h4>📋 Como pegar suas chaves da Woovi:</h4>
-            <ol>
-              <li>Acesse: <a href="https://woovi.com" target="_blank">woovi.com</a></li>
-              <li>Cadastre sua conta com o CNPJ</li>
-              <li>No painel, vá em <strong>Desenvolvedores → API</strong></li>
-              <li>Copie o <strong>Client ID</strong> e o <strong>Client Secret</strong></li>
-              <li>Cole nos campos abaixo</li>
-              <li>Webhook: <code>https://SEU-DOMINIO/api/webhook/woovi</code></li>
-            </ol>
-          </div>
-          
           <div class="grupo-input">
             <label>CNPJ <strong style="color:red">*</strong></label>
             <input type="text" id="cnpj-cad" placeholder="Digite o CNPJ da instituição">
@@ -202,21 +198,7 @@
             <input type="text" id="chave-pix-cad" placeholder="Onde recebe os valores">
           </div>
           
-          <div style="background:#f9fafb;padding:15px;border-radius:8px;margin:15px 0">
-            <h4 style="margin-bottom:10px">🔑 Suas Credenciais da Woovi</h4>
-            <div class="grupo-input">
-              <label>Client ID <strong style="color:red">*</strong></label>
-              <input type="text" id="woovi-id" placeholder="ws_client_xxxxxxxxxxxx">
-            </div>
-            <div class="grupo-input">
-              <label>Client Secret <strong style="color:red">*</strong></label>
-              <input type="password" id="woovi-secret" placeholder="Sua chave secreta">
-            </div>
-            <div class="grupo-input">
-              <label>Webhook Secret (opcional)</label>
-              <input type="text" id="woovi-webhook" placeholder="Senha de confirmação">
-            </div>
-          </div>
+          
         </div>
         
         <button class="btn btn-primario" style="width:100%;margin-top:15px" onclick="fazerCadastro()">Finalizar Cadastro</button>
@@ -228,26 +210,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-<!-- (O restante do HTML continua igual — só adicionar a aba de configurações) -->
-<!-- No menu de navegação do admin, adicione: -->
-<a href="#" data-pagina="configuracoes">⚙️ Configurações da Plataforma</a>
-
-<!-- E a página correspondente: -->
-<div id="pagina-configuracoes" class="card" style="display:none">
-  <h2>⚙️ Configurações da Plataforma</h2>
-  <div id="aviso-config" class="aviso" style="display:none"></div>
-  
-  <div class="grupo-input">
-    <label>💰 Taxa da Plataforma (%)</label>
-    <input type="number" id="config-taxa" step="0.01" min="0" max="100" placeholder="Ex: 5 = 5%">
-    <p style="color:#666;font-size:.85rem;margin-top:5px">Porcentagem descontada de cada cartela. O resto vai para a instituição.</p>
-  </div>
-  
-  <div class="grupo-input">
-    <label>💳 Sua Chave PIX (Plataforma)</label>
-    <input type="text" id="config-chave-pix" placeholder="sua.chave@pix.com.br">
-    <p style="color:#666;font-size:.85rem;margin-top:5px">Para onde vai o valor da sua taxa.</p>
-  </div>
-  
-  <button class="btn btn-primario" onclick="salvarConfiguracoes()">💾 Salvar Alterações</button>
-</div>
