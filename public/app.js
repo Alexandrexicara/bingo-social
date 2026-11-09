@@ -77,9 +77,6 @@ async function fazerCadastro() {
       dados.endereco = document.getElementById('end-cad').value;
       dados.responsavel = document.getElementById('resp-cad').value;
       dados.chave_pix = document.getElementById('chave-pix-cad').value;
-      dados.woovi_client_id = document.getElementById('woovi-id').value;
-      dados.woovi_client_secret = document.getElementById('woovi-secret').value;
-      dados.woovi_webhook_secret = document.getElementById('woovi-webhook').value || null;
     }
     
     await requisicao('/auth/register', 'POST', dados);
