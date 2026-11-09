@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const axios = require('axios');
 const { pool, criarTabelas } = require('./database');
 
 const app = express();
@@ -87,7 +86,7 @@ app.post('/api/auth/register', async (req, res) => {
       mensagem: tipo==='instituicao' 
         ? 'Cadastro enviado! Aguarde aprovação do administrador.' 
         : 'Conta criada com sucesso!',
-      usuario: resultado.rows[0]
+      usuario: { id: resultado.rows[0].id, tipo: resultado.rows[0].tipo, nome: resultado.rows[0].nome, email: resultado.rows[0].email, status: resultado.rows[0].status }
     });
   } catch (err) {
     console.error(err);
