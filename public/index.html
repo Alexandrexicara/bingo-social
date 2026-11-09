@@ -197,6 +197,22 @@
             <label>Chave PIX da Instituição <strong style="color:red">*</strong></label>
             <input type="text" id="chave-pix-cad" placeholder="Onde recebe os valores">
           </div>
+          <div class="instrucoes">
+            <h4>🔐 Credenciais de pagamento da instituição</h4>
+            <p>As credenciais são enviadas ao servidor por HTTPS e armazenadas criptografadas. Não compartilhe essas chaves com outras pessoas.</p>
+          </div>
+          <div class="grupo-input">
+            <label>Woovi Client ID <strong style="color:red">*</strong></label>
+            <input type="text" id="woovi-id" autocomplete="off" placeholder="Client ID da sua conta Woovi">
+          </div>
+          <div class="grupo-input">
+            <label>Woovi Client Secret <strong style="color:red">*</strong></label>
+            <input type="password" id="woovi-secret" autocomplete="new-password" placeholder="Client Secret da sua conta Woovi">
+          </div>
+          <div class="grupo-input">
+            <label>Webhook Secret (opcional)</label>
+            <input type="password" id="woovi-webhook" autocomplete="new-password" placeholder="Segredo HMAC configurado no webhook">
+          </div>
           
           
         </div>
