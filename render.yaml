@@ -11,21 +11,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATABASE_URL
-        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: WOOVI_API_URL
         value: https://api.woovi.com
       - key: CREDENTIALS_ENCRYPTION_KEY
         generateValue: true
-      - key: WOOVI_APP_ID
-        sync: false
-      - key: WOOVI_WEBHOOK_AUTHORIZATION
-        sync: false
-      - key: WOOVI_WEBHOOK_SECRET
-        sync: false
-      - key: WOOVI_CLIENT_ID
-        sync: false
-      - key: WOOVI_CLIENT_SECRET
-        sync: false
