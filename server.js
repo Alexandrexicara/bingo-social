@@ -95,7 +95,8 @@ async function createWooviCharge(data) {
       correlationID:data.correlationID,
       value:data.valueCents,
       comment:data.comment,
-      customer:{name:data.user.nome,email:data.user.email,phone:data.user.telefone || undefined}
+      customer:{name:data.user.nome,email:data.user.email,phone:data.user.telefone || undefined},
+      splits:data.platformFeeCents>0?[{pixKey:data.platformPixKey,value:data.platformFeeCents,splitType:'SPLIT_PARTNER'}]:undefined
     }),
     signal:AbortSignal.timeout(15000)
   });
@@ -149,6 +150,7 @@ app.post('/api/auth/register',async(req,res)=>{
     const endereco=typeof b.endereco==='string'?b.endereco.trim():'', responsavel=typeof b.responsavel==='string'?b.responsavel.trim():'';
     if(tipo==='instituicao' && (cnpj.length!==14 || !chave || !endereco || !responsavel || !b.woovi_client_id || !b.woovi_client_secret)) return fail(res,400,'Preencha CNPJ, endereço, responsável, chave PIX, Client ID e Client Secret da Woovi.');
     if(tipo==='instituicao' && !credentialKey()) return fail(res,503,'A proteção das credenciais Woovi ainda não foi configurada no servidor.');
+    if(tipo==='instituicao' && !b.woovi_webhook_secret && !process.env.WOOVI_WEBHOOK_SECRET && !process.env.WOOVI_WEBHOOK_AUTHORIZATION) return fail(res,400,'Informe o Webhook Secret da Woovi ou peça ao administrador para configurar uma autenticação global no servidor.');
     const hash=await bcrypt.hash(senha,12), status=tipo==='jogador'?'aprovado':'pendente';
     const r=await pool.query('INSERT INTO usuarios (tipo,nome,email,senha,telefone,cnpj,endereco,responsavel,chave_pix,woovi_client_id,woovi_client_secret,woovi_webhook_secret,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id,tipo,nome,email,status',
       [tipo,nome,email,hash,typeof b.telefone==='string'?b.telefone.trim():null,cnpj||null,endereco||null,responsavel||null,chave||null,tipo==='instituicao'?encryptCredential(b.woovi_client_id):null,tipo==='instituicao'?encryptCredential(b.woovi_client_secret):null,tipo==='instituicao'?encryptCredential(b.woovi_webhook_secret||''):null,status]);
@@ -214,6 +216,7 @@ app.post('/api/bingos/:id/cartela',auth,async(req,res)=>{
     const bingo=br.rows[0];
     if(bingo.status!=='publicado') { await client.query('ROLLBACK'); return fail(res,409,'As vendas desta cartela não estão abertas.'); }
     cfg=await getConfig();
+    if(Number(cfg.taxa_plataforma)>0 && !String(cfg.chave_pix_plataforma||'').trim()) { await client.query('ROLLBACK'); return fail(res,503,'Configure a chave PIX da plataforma no painel Admin antes de vender cartelas.'); }
     const ir=await client.query('SELECT id,nome,chave_pix,woovi_client_id,woovi_client_secret,woovi_webhook_secret FROM usuarios WHERE id=$1 AND status=$2',[bingo.usuario_id,'aprovado']);
     if(!ir.rows.length) { await client.query('ROLLBACK'); return fail(res,409,'Instituição responsável indisponível.'); }
     inst=ir.rows[0];
@@ -233,7 +236,7 @@ app.post('/api/bingos/:id/cartela',auth,async(req,res)=>{
   finally { client.release(); }
 
   try {
-    const pix=await createWooviCharge({correlationID:corr,valueCents:Math.round(total*100),comment:'Cartela '+ticket.codigo+' - Bingo Social',user:req.usuario,institution:inst});
+    const pix=await createWooviCharge({correlationID:corr,valueCents:Math.round(total*100),comment:'Cartela '+ticket.codigo+' - Bingo Social',user:req.usuario,institution:inst,platformFeeCents:Math.round(platform*100),platformPixKey:cfg.chave_pix_plataforma||''});
     await pool.query('UPDATE pagamentos SET woovi_charge_id=$1,br_code=$2,qr_code_image=$3,payment_link_url=$4,expires_at=$5 WHERE correlation_id=$6',[pix.id,pix.brCode,pix.qr,pix.link,pix.expires,corr]);
     await pool.query('UPDATE cartelas SET txid_woovi=$1 WHERE id=$2',[corr,ticket.id]);
     res.status(201).json({...ticket,valor_total:total,valor_plataforma:platform,valor_instituicao:instValue,pix:{brCode:pix.brCode,qrCodeImage:pix.qr,paymentLinkUrl:pix.link,expiresAt:pix.expires},mensagem:'PIX criado. A cartela será liberada após a confirmação do pagamento.'});
