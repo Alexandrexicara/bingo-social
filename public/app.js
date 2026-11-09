@@ -96,6 +96,7 @@ async function fazerLogin() {
     });
     token = dados.token; usuarioLogado = dados.usuario;
     localStorage.setItem('token_bingo', token);
+    localStorage.setItem('ultimo_email', dados.usuario.email || '');
     fecharModais();
     inicializarLogado();
   } catch(e) { mostrarAviso('aviso-modal', '❌ ' + e.message, 'erro'); }
@@ -147,11 +148,13 @@ function inicializarLogado() {
   document.getElementById('paginas-internas').classList.remove('oculto');
   document.getElementById('link-criar').classList.toggle('oculto', usuarioLogado.tipo !== 'instituicao' && usuarioLogado.tipo !== 'admin');
   document.getElementById('link-admin').classList.toggle('oculto', usuarioLogado.tipo !== 'admin');
+  document.getElementById('link-configuracoes').classList.toggle('oculto', usuarioLogado.tipo !== 'admin');
   
   document.querySelectorAll('[data-pagina]').forEach(link => {
     link.onclick = e => {
       e.preventDefault();
       document.querySelectorAll('[data-pagina]').forEach(l => l.classList.toggle('ativo', l.dataset.pagina === link.dataset.pagina));
+      document.getElementById('pagina-inicio').style.display = link.dataset.pagina === 'inicio' ? 'block' : 'none';
       ['meus-bingos','criar','admin','configuracoes'].forEach(p => {
         const pg = document.getElementById(`pagina-${p}`);
         if (pg) pg.style.display = p === link.dataset.pagina ? 'block' : 'none';
@@ -227,7 +230,7 @@ function montarSala() {
     html += `<button class="btn btn-primario" onclick="comprarCartela()">🎟️ Comprar Cartela</button>`;
   }
 
-  html += `<div style="margin-top:30px"><h3>Suas Cartelas</h3><div id="suas-cartelas"></div></div>`;
+  html += `<div id="pagamento-pix" style="margin-top:20px"></div><div style="margin-top:30px"><h3>Suas Cartelas</h3><div id="suas-cartelas"></div></div>`;
 
   document.getElementById('conteudo-sala').innerHTML = html;
   atualizarBolas();
@@ -263,10 +266,28 @@ async function sortearProximo() {
 async function comprarCartela() {
   try {
     const res = await requisicao(`/bingos/${bingoAtual.id}/cartela`, 'POST');
-    alert(`✅ Cartela criada!\nCódigo: ${res.codigo}\nValor: R$ ${res.valor_total}\nSua parte: R$ ${res.valor_instituicao}\nTaxa plataforma: R$ ${res.valor_plataforma}`);
+    const area = document.getElementById('pagamento-pix');
+    const pix = res.pix || {};
+    if (!area) throw new Error('Área de pagamento não encontrada.');
+    const imagem = pix.qrCodeImage ? `<img src="${pix.qrCodeImage}" alt="QR Code PIX" style="display:block;max-width:260px;width:100%;margin:12px auto;border:1px solid #ddd;border-radius:8px">` : '';
+    const link = pix.paymentLinkUrl ? `<p><a href="${pix.paymentLinkUrl}" target="_blank" rel="noopener">Abrir pagamento PIX</a></p>` : '';
+    area.innerHTML = `<div class="card" style="margin-top:15px"><h3>💠 Pagamento PIX da cartela ${res.codigo}</h3><p>Valor: <strong>R$ ${Number(res.valor_total).toFixed(2)}</strong></p>${imagem}${link}<label>PIX Copia e Cola</label><textarea id="pix-copia-cola" readonly rows="4" style="width:100%;padding:10px">${pix.brCode || ''}</textarea><button class="btn btn-primario" style="margin-top:10px" onclick="copiarCodigoPix()">Copiar código PIX</button><p style="margin-top:10px;color:#92400e">A cartela será confirmada automaticamente após a Woovi avisar que o pagamento foi recebido.</p></div>`;
     carregarMinhasCartelasNaSala();
   } catch(e) {
     alert('Erro: ' + e.message);
+  }
+}
+
+async function copiarCodigoPix() {
+  const campo = document.getElementById('pix-copia-cola');
+  if (!campo || !campo.value) return alert('Código PIX ainda não disponível.');
+  try {
+    await navigator.clipboard.writeText(campo.value);
+    alert('Código PIX copiado.');
+  } catch {
+    campo.select();
+    document.execCommand('copy');
+    alert('Código PIX copiado.');
   }
 }
 
@@ -367,12 +388,22 @@ async function aprovarInst(id) {
   carregarInstituicoes();
 }
 
-// Inicialização
-carregarBingos();
-if (token) {
-  requisicao('/auth/login', 'POST', {email: localStorage.getItem('ultimo_email') || '', senha: ''})
-    .catch(() => {});
+// Restaura a sessão existente sem tentar autenticar novamente com senha vazia.
+async function restaurarSessao() {
+  if (!token) return;
+  try {
+    const dados = await requisicao('/auth/me');
+    usuarioLogado = dados.usuario;
+    inicializarLogado();
+  } catch {
+    token = null;
+    usuarioLogado = null;
+    localStorage.removeItem('token_bingo');
+  }
 }
+
+carregarBingos().catch(e => console.error('Falha ao carregar bingos:', e));
+restaurarSessao();
 // ========== CONFIGURAÇÕES DA PLATAFORMA ==========
 async function carregarConfiguracoes() {
   try {
