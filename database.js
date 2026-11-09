@@ -91,14 +91,20 @@ async function criarTabelas() {
     `);
 
     const bcrypt = require('bcryptjs');
-    const admin = await client.query("SELECT id FROM usuarios WHERE email = 'admin@bingo'");
-    if (admin.rows.length === 0) {
-      const senhaHash = await bcrypt.hash('admin@bingo', 10);
-      await client.query(`
-        INSERT INTO usuarios (tipo, nome, email, senha, status, chave_pix, cnpj, endereco, responsavel)
-        VALUES ('admin', 'Administrador', 'admin@bingo', $1, 'aprovado', 'sem-chave', '00000000000000', 'Sistema', 'Suporte')
-      `, [senhaHash]);
-      console.log('✅ Admin criado: admin@bingo / senha: admin@bingo');
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (adminEmail && adminPassword) {
+      const admin = await client.query('SELECT id FROM usuarios WHERE email = $1', [adminEmail]);
+      if (admin.rows.length === 0) {
+        const senhaHash = await bcrypt.hash(adminPassword, 12);
+        await client.query(`
+          INSERT INTO usuarios (tipo, nome, email, senha, status, chave_pix, cnpj, endereco, responsavel)
+          VALUES ('admin', 'Administrador', $1, $2, 'aprovado', 'sem-chave', '00000000000000', 'Sistema', 'Suporte')
+        `, [adminEmail, senhaHash]);
+        console.log('✅ Administrador inicial criado a partir das variáveis de ambiente.');
+      }
+    } else {
+      console.warn('⚠️ ADMIN_EMAIL e ADMIN_PASSWORD não configurados; criação automática do administrador ignorada.');
     }
 
     console.log('✅ Tabelas prontas! Taxa e chave PIX editáveis no painel Admin!');
