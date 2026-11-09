@@ -17,6 +17,8 @@ services:
         generateValue: true
       - key: WOOVI_API_URL
         value: https://api.woovi.com
+      - key: CREDENTIALS_ENCRYPTION_KEY
+        generateValue: true
       - key: WOOVI_APP_ID
         sync: false
       - key: WOOVI_WEBHOOK_AUTHORIZATION
