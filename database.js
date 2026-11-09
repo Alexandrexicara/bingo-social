@@ -29,13 +29,15 @@ async function criarTabelas() {
         cnpj VARCHAR(30),
         endereco TEXT,
         responsavel VARCHAR(255),
-        chave_pix TEXT NOT NULL,
+        chave_pix TEXT DEFAULT '',
         woovi_client_id TEXT,
         woovi_client_secret TEXT,
         woovi_webhook_secret TEXT,
         status VARCHAR(20) DEFAULT 'pendente',
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE usuarios ALTER COLUMN chave_pix DROP NOT NULL;
 
       CREATE TABLE IF NOT EXISTS bingos (
         id SERIAL PRIMARY KEY,
@@ -102,6 +104,7 @@ async function criarTabelas() {
     console.log('✅ Tabelas prontas! Taxa e chave PIX editáveis no painel Admin!');
   } catch (err) {
     console.error('❌ Erro nas tabelas:', err);
+    throw err;
   } finally {
     client.release();
   }
