@@ -176,9 +176,9 @@ app.post('/api/bingos/:id/cartela',auth,async(req,res)=>{
     const ir=await client.query('SELECT id,nome,chave_pix FROM usuarios WHERE id=$1 AND status=$2',[bingo.usuario_id,'aprovado']);
     if(!ir.rows.length) { await client.query('ROLLBACK'); return fail(res,409,'Instituição responsável indisponível.'); }
     inst=ir.rows[0];
-    const count=await client.query('SELECT COUNT(*)::int AS total FROM cartelas c LEFT JOIN pagamentos p ON p.cartela_id=c.id WHERE c.bingo_id=$1 AND COALESCE(p.status,'pendente') <> 'erro'',[bingo.id]);
+    const count=await client.query("SELECT COUNT(*)::int AS total FROM cartelas c LEFT JOIN pagamentos p ON p.cartela_id=c.id WHERE c.bingo_id=$1 AND COALESCE(p.status,'pendente') <> 'erro'",[bingo.id]);
     if(count.rows[0].total>=Number(bingo.max_cartelas||500)) { await client.query('ROLLBACK'); return fail(res,409,'Todas as cartelas já foram vendidas.'); }
-    const own=await client.query('SELECT COUNT(*)::int AS total FROM cartelas c LEFT JOIN pagamentos p ON p.cartela_id=c.id WHERE c.bingo_id=$1 AND c.usuario_id=$2 AND COALESCE(p.status,'pendente') <> 'erro'',[bingo.id,req.usuario.id]);
+    const own=await client.query("SELECT COUNT(*)::int AS total FROM cartelas c LEFT JOIN pagamentos p ON p.cartela_id=c.id WHERE c.bingo_id=$1 AND c.usuario_id=$2 AND COALESCE(p.status,'pendente') <> 'erro'",[bingo.id,req.usuario.id]);
     if(own.rows[0].total>=Number(bingo.limite_por_pessoa||3)) { await client.query('ROLLBACK'); return fail(res,409,'Você atingiu o limite de cartelas deste bingo.'); }
     total=Number(bingo.preco_cartela); platform=Number((total*Number(cfg.taxa_plataforma)/100).toFixed(2)); instValue=Number((total-platform).toFixed(2));
     corr='BINGO-'+bingo.id+'-'+crypto.randomUUID();
