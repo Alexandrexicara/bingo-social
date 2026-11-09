@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
   endereco TEXT,
   responsavel VARCHAR(255),
   chave_pix TEXT DEFAULT '',
+  woovi_client_id TEXT,
+  woovi_client_secret TEXT,
+  woovi_webhook_secret TEXT,
   status VARCHAR(20) DEFAULT 'pendente',
   criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   conferencia_auto BOOLEAN DEFAULT TRUE
