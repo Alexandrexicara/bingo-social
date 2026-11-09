@@ -3,6 +3,10 @@
 
 ALTER TABLE cartelas ADD COLUMN IF NOT EXISTS txid_woovi VARCHAR(120);
 
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS woovi_client_id TEXT;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS woovi_client_secret TEXT;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS woovi_webhook_secret TEXT;
+
 ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS correlation_id VARCHAR(120);
 ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS woovi_charge_id VARCHAR(160);
 ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS br_code TEXT;
