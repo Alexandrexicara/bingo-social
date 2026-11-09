@@ -291,6 +291,15 @@ async function copiarCodigoPix() {
   }
 }
 
+async function copiarPixCartela(id) {
+  try {
+    const pagamento = await requisicao('/pagamentos/' + id);
+    if (!pagamento.br_code) return alert('Código PIX ainda não disponível.');
+    try { await navigator.clipboard.writeText(pagamento.br_code); alert('PIX copiado.'); }
+    catch { prompt('Copie o código PIX:', pagamento.br_code); }
+  } catch(e) { alert(e.message); }
+}
+
 async function carregarMinhasCartelasNaSala() {
   const el = document.getElementById('suas-cartelas');
   if (!el) return;
@@ -302,6 +311,8 @@ async function carregarMinhasCartelasNaSala() {
       <div style="padding:10px;border:1px solid #ddd;border-radius:8px;margin:8px 0;background:${c.paga ? '#f0fff4' : '#fff8e1'}">
         <strong>${c.codigo}</strong> — ${c.paga ? '✅ Paga' : '⏳ Aguardando pagamento'}
         <div style="margin-top:5px;font-family:monospace;letter-spacing:2px">${c.numeros.join(' | ')}</div>
+        ${!c.paga && c.br_code ? `<details style="margin-top:10px"><summary>Ver QR Code e PIX Copia e Cola</summary>${c.qr_code_image ? `<img src="${c.qr_code_image}" alt="QR Code PIX" style="display:block;max-width:220px;width:100%;margin:10px auto">` : ''}${c.payment_link_url ? `<p><a href="${c.payment_link_url}" target="_blank" rel="noopener">Abrir pagamento</a></p>` : ''}<button class="btn btn-primario" onclick="copiarPixCartela(${c.id})">Copiar PIX</button></details>` : ''}
+        ${!c.paga ? `<button class="btn btn-claro" style="margin-top:8px" onclick="carregarMinhasCartelasNaSala()">Atualizar pagamento</button>` : ''}
       </div>
     `).join('');
   } catch {}
@@ -318,6 +329,8 @@ async function carregarMinhasCartelas() {
         <p>🎁 ${c.premio}</p>
         <p><strong>${c.codigo}</strong> — ${c.paga ? '✅ Paga' : '⏳ Pendente'}</p>
         <div style="font-family:monospace;font-size:1.1rem;padding:10px;background:#f5f5f5;border-radius:6px">${c.numeros.join(' · ')}</div>
+        ${!c.paga && c.br_code ? `<details style="margin-top:10px"><summary>Ver QR Code e PIX Copia e Cola</summary>${c.qr_code_image ? `<img src="${c.qr_code_image}" alt="QR Code PIX" style="display:block;max-width:220px;width:100%;margin:10px auto">` : ''}${c.payment_link_url ? `<p><a href="${c.payment_link_url}" target="_blank" rel="noopener">Abrir pagamento</a></p>` : ''}<button class="btn btn-primario" onclick="copiarPixCartela(${c.id})">Copiar PIX</button></details>` : ''}
+        ${!c.paga ? `<button class="btn btn-claro" style="margin-top:8px" onclick="carregarMinhasCartelas()">Atualizar pagamento</button>` : ''}
       </div>
     `).join('');
   } catch { container.innerHTML = '<p>Erro ao carregar.</p>'; }
