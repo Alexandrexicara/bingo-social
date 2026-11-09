@@ -375,7 +375,7 @@ async function carregarInstituicoes() {
         <p>👤 Responsável: ${i.responsavel}</p>
         <p>🏠 ${i.endereco}</p>
         <p>💳 PIX: ${i.chave_pix}</p>
-        <p>🔑 Woovi: ${i.woovi_client_id ? '✅ Configurado' : '❌ Não configurado'}</p>
+        <p>💳 Pagamentos PIX: credenciais protegidas no servidor.</p>
         <button class="btn btn-sucesso" onclick="aprovarInst(${i.id})">✅ Aprovar</button>
       </div>
     `).join('');
