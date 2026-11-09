@@ -50,6 +50,35 @@ function gerarCartela() {
   }
   cols[2][2]=0; return cols.flat();
 }
+function credentialKey() {
+  const secret=process.env.CREDENTIALS_ENCRYPTION_KEY;
+  return secret ? crypto.createHash('sha256').update(secret).digest() : null;
+}
+function encryptCredential(value) {
+  if(!value) return null;
+  const key=credentialKey();
+  if(!key) throw new Error('Configure CREDENTIALS_ENCRYPTION_KEY para armazenar credenciais Woovi com segurança.');
+  const iv=crypto.randomBytes(12), cipher=crypto.createCipheriv('aes-256-gcm',key,iv);
+  const encrypted=Buffer.concat([cipher.update(String(value),'utf8'),cipher.final()]);
+  return 'enc:v1:'+iv.toString('base64')+':'+cipher.getAuthTag().toString('base64')+':'+encrypted.toString('base64');
+}
+function decryptCredential(value) {
+  if(!value) return '';
+  if(!String(value).startsWith('enc:v1:')) return String(value);
+  const key=credentialKey();
+  if(!key) throw new Error('CREDENTIALS_ENCRYPTION_KEY não configurada.');
+  const parts=String(value).split(':');
+  if(parts.length!==5) throw new Error('Credencial Woovi armazenada em formato inválido.');
+  const decipher=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(parts[2],'base64'));
+  decipher.setAuthTag(Buffer.from(parts[3],'base64'));
+  return Buffer.concat([decipher.update(Buffer.from(parts[4],'base64')),decipher.final()]).toString('utf8');
+}
+function appIdDaInstituicao(instituicao) {
+  const clientId=decryptCredential(instituicao && instituicao.woovi_client_id);
+  const clientSecret=decryptCredential(instituicao && instituicao.woovi_client_secret);
+  if(clientId && clientSecret) return Buffer.from(clientId+':'+clientSecret,'utf8').toString('base64');
+  return wooviAppId();
+}
 function wooviAppId() {
   if (process.env.WOOVI_APP_ID) return process.env.WOOVI_APP_ID.trim();
   if (process.env.WOOVI_CLIENT_ID && process.env.WOOVI_CLIENT_SECRET)
@@ -57,7 +86,7 @@ function wooviAppId() {
   return '';
 }
 async function createWooviCharge(data) {
-  const appId=wooviAppId();
+  const appId=appIdDaInstituicao(data.institution);
   if(!appId) { const e=new Error('Integração Woovi não configurada no servidor.'); e.status=503; throw e; }
   const response=await fetch(WOOVI_URL+'/api/v1/charge',{
     method:'POST',
@@ -118,10 +147,11 @@ app.post('/api/auth/register',async(req,res)=>{
     if(senha.length<8) return fail(res,400,'A senha deve ter pelo menos 8 caracteres.');
     const cnpj=typeof b.cnpj==='string'?b.cnpj.replace(/\D/g,''):'', chave=typeof b.chave_pix==='string'?b.chave_pix.trim():'';
     const endereco=typeof b.endereco==='string'?b.endereco.trim():'', responsavel=typeof b.responsavel==='string'?b.responsavel.trim():'';
-    if(tipo==='instituicao' && (cnpj.length!==14 || !chave || !endereco || !responsavel)) return fail(res,400,'Preencha CNPJ, endereço, responsável e chave PIX da instituição.');
+    if(tipo==='instituicao' && (cnpj.length!==14 || !chave || !endereco || !responsavel || !b.woovi_client_id || !b.woovi_client_secret)) return fail(res,400,'Preencha CNPJ, endereço, responsável, chave PIX, Client ID e Client Secret da Woovi.');
+    if(tipo==='instituicao' && !credentialKey()) return fail(res,503,'A proteção das credenciais Woovi ainda não foi configurada no servidor.');
     const hash=await bcrypt.hash(senha,12), status=tipo==='jogador'?'aprovado':'pendente';
-    const r=await pool.query('INSERT INTO usuarios (tipo,nome,email,senha,telefone,cnpj,endereco,responsavel,chave_pix,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id,tipo,nome,email,status',
-      [tipo,nome,email,hash,typeof b.telefone==='string'?b.telefone.trim():null,cnpj||null,endereco||null,responsavel||null,chave||null,status]);
+    const r=await pool.query('INSERT INTO usuarios (tipo,nome,email,senha,telefone,cnpj,endereco,responsavel,chave_pix,woovi_client_id,woovi_client_secret,woovi_webhook_secret,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id,tipo,nome,email,status',
+      [tipo,nome,email,hash,typeof b.telefone==='string'?b.telefone.trim():null,cnpj||null,endereco||null,responsavel||null,chave||null,tipo==='instituicao'?encryptCredential(b.woovi_client_id):null,tipo==='instituicao'?encryptCredential(b.woovi_client_secret):null,tipo==='instituicao'?encryptCredential(b.woovi_webhook_secret||''):null,status]);
     return res.status(201).json({mensagem:tipo==='instituicao'?'Cadastro enviado. Aguarde aprovação do administrador.':'Conta criada com sucesso. Faça login.',usuario:r.rows[0]});
   } catch(e) { if(e.code==='23505') return fail(res,409,'Este e-mail já está cadastrado.'); console.error('Register:',e); return fail(res,500,'Não foi possível concluir o cadastro.'); }
 });
@@ -184,7 +214,7 @@ app.post('/api/bingos/:id/cartela',auth,async(req,res)=>{
     const bingo=br.rows[0];
     if(bingo.status!=='publicado') { await client.query('ROLLBACK'); return fail(res,409,'As vendas desta cartela não estão abertas.'); }
     cfg=await getConfig();
-    const ir=await client.query('SELECT id,nome,chave_pix FROM usuarios WHERE id=$1 AND status=$2',[bingo.usuario_id,'aprovado']);
+    const ir=await client.query('SELECT id,nome,chave_pix,woovi_client_id,woovi_client_secret,woovi_webhook_secret FROM usuarios WHERE id=$1 AND status=$2',[bingo.usuario_id,'aprovado']);
     if(!ir.rows.length) { await client.query('ROLLBACK'); return fail(res,409,'Instituição responsável indisponível.'); }
     inst=ir.rows[0];
     const count=await client.query("SELECT COUNT(*)::int AS total FROM cartelas c LEFT JOIN pagamentos p ON p.cartela_id=c.id WHERE c.bingo_id=$1 AND COALESCE(p.status,'pendente') <> 'erro'",[bingo.id]);
@@ -203,7 +233,7 @@ app.post('/api/bingos/:id/cartela',auth,async(req,res)=>{
   finally { client.release(); }
 
   try {
-    const pix=await createWooviCharge({correlationID:corr,valueCents:Math.round(total*100),comment:'Cartela '+ticket.codigo+' - Bingo Social',user:req.usuario});
+    const pix=await createWooviCharge({correlationID:corr,valueCents:Math.round(total*100),comment:'Cartela '+ticket.codigo+' - Bingo Social',user:req.usuario,institution:inst});
     await pool.query('UPDATE pagamentos SET woovi_charge_id=$1,br_code=$2,qr_code_image=$3,payment_link_url=$4,expires_at=$5 WHERE correlation_id=$6',[pix.id,pix.brCode,pix.qr,pix.link,pix.expires,corr]);
     await pool.query('UPDATE cartelas SET txid_woovi=$1 WHERE id=$2',[corr,ticket.id]);
     res.status(201).json({...ticket,valor_total:total,valor_plataforma:platform,valor_instituicao:instValue,pix:{brCode:pix.brCode,qrCodeImage:pix.qr,paymentLinkUrl:pix.link,expiresAt:pix.expires},mensagem:'PIX criado. A cartela será liberada após a confirmação do pagamento.'});
@@ -214,18 +244,26 @@ app.post('/api/bingos/:id/cartela',auth,async(req,res)=>{
 });
 
 app.post('/api/webhook/woovi',async(req,res)=>{
-  if(!webhookAuth(req)) return fail(res,401,'Assinatura do webhook inválida.');
   const p=req.body||{},event=p.event||'',charge=p.charge||{};
   if(event!=='OPENPIX:CHARGE_COMPLETED') return res.status(200).json({ok:true,ignorado:true});
   const corr=charge.correlationID||charge.correlationId;
   if(!corr) return fail(res,400,'Evento sem correlationID.');
+  const account=await pool.query('SELECT u.woovi_webhook_secret FROM pagamentos p JOIN cartelas c ON c.id=p.cartela_id JOIN bingos b ON b.id=c.bingo_id JOIN usuarios u ON u.id=b.usuario_id WHERE p.correlation_id=$1',[corr]);
+  const institutionSecret=account.rows.length?decryptCredential(account.rows[0].woovi_webhook_secret):'';
+  const globalSecret=process.env.WOOVI_WEBHOOK_SECRET||'';
+  const token=process.env.WOOVI_WEBHOOK_AUTHORIZATION||'';
+  const header=req.get('authorization')||req.get('x-openpix-authorization')||'';
+  const tokenOk=token&&(header===token||header==='Bearer '+token);
+  const signatureOkForAccount=signatureOk(req.rawBody,req.get('x-openpix-signature'),institutionSecret||globalSecret,'sha1')||
+    signatureOk(req.rawBody,req.get('x-webhook-signature'),institutionSecret||globalSecret,'sha256');
+  if(!tokenOk&&!signatureOkForAccount) return fail(res,401,'Assinatura do webhook inválida.');
   const eventKey=String(charge.identifier||charge.id||corr)+':'+event,client=await pool.connect();
   try {
     await client.query('BEGIN');
     const inserted=await client.query('INSERT INTO webhook_events (event_key,event_type,correlation_id) VALUES ($1,$2,$3) ON CONFLICT (event_key) DO NOTHING RETURNING id',[eventKey,event,corr]);
     if(!inserted.rows.length) { await client.query('COMMIT'); return res.status(200).json({ok:true,duplicado:true}); }
     const pay=await client.query('SELECT cartela_id,status FROM pagamentos WHERE correlation_id=$1 FOR UPDATE',[corr]);
-    if(pay.rows.length && pay.rows[0].status!=='concluido') {
+    if(pay.rows.length&&pay.rows[0].status!=='concluido') {
       await client.query("UPDATE pagamentos SET status='concluido' WHERE correlation_id=$1",[corr]);
       await client.query('UPDATE cartelas SET paga=true WHERE id=$1',[pay.rows[0].cartela_id]);
     }
