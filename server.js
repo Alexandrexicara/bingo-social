@@ -17,6 +17,16 @@ app.use(cors({ origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split('
 app.use(express.json({ limit: '1mb', verify: (req, res, buffer) => { req.rawBody = Buffer.from(buffer); } }));
 app.use(express.static('public'));
 
+// Express 4 não captura automaticamente rejeições de handlers async.
+for (const method of ['get','post','patch','put','delete']) {
+  const original = app[method].bind(app);
+  app[method] = (...args) => original(...args.map(handler =>
+    typeof handler === 'function' && handler.constructor.name === 'AsyncFunction'
+      ? (req,res,next) => Promise.resolve(handler(req,res,next)).catch(next)
+      : handler
+  ));
+}
+
 function fail(res, status, message) { return res.status(status).json({ erro: message }); }
 function validEmail(email) { return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()); }
 function isAdmin(req) { return req.usuario && req.usuario.tipo === 'admin'; }
@@ -164,6 +174,7 @@ app.patch('/api/bingos/:id/publicar',auth,async(req,res)=>{
 });
 
 app.post('/api/bingos/:id/cartela',auth,async(req,res)=>{
+  if(req.usuario.tipo!=='jogador') return fail(res,403,'Somente contas de jogador podem comprar cartelas.');
   if(!wooviAppId()) return fail(res,503,'O pagamento PIX ainda não está configurado no servidor.');
   const client=await pool.connect(); let ticket,corr,total,platform,instValue,cfg,inst;
   try {
@@ -271,6 +282,12 @@ app.get('/api/admin/instituicoes',auth,admin,async(req,res)=>{
 });
 app.get('/api/meus-bingos',auth,async(req,res)=>{
   const r=await pool.query('SELECT * FROM bingos WHERE usuario_id=$1 ORDER BY criado_em DESC',[req.usuario.id]); res.json(r.rows);
+});
+
+app.use((err,req,res,next)=>{
+  console.error('Erro não tratado na API:',err);
+  if(res.headersSent) return next(err);
+  return res.status(500).json({erro:'Erro interno do servidor.'});
 });
 
 async function iniciar() {
